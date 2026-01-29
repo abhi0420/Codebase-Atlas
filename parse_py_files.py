@@ -1,6 +1,6 @@
 import ast
 import os
-
+import json
 
 def extract_imports(tree):
     imports = set()
@@ -39,7 +39,7 @@ def parse_python_file(file_path):
             id = f"{filename}::{node.name}"
             name = node.name
             imports = module_imports
-            type = 'function'
+            node_type = 'function'
             args = [arg.arg for arg in node.args.args]
             line_no = node.lineno
             end_line_no = node.end_lineno
@@ -48,7 +48,7 @@ def parse_python_file(file_path):
             parsed_nodes.append({
                 'id' : id,
                 'name': name,
-                'type': type,
+                'node_type': node_type,
                 'args': args,
                 'imports': imports,
                 'line_no': line_no,
@@ -61,7 +61,7 @@ def parse_python_file(file_path):
         elif isinstance(node, ast.ClassDef):
             name = node.name
             id = f"{filename}::{name}"
-            type = 'class'
+            node_type = 'class'
             base_class = [base.id for base in node.bases if isinstance(base, ast.Name)]
             line_no = node.lineno
             end_line_no = node.end_lineno
@@ -69,7 +69,7 @@ def parse_python_file(file_path):
             parsed_nodes.append({
                 'id': id,
                 'name': name,
-                'type': type,
+                'node_type': node_type,
                 'base_class': base_class,
                 'imports': module_imports,
                 'line_no': line_no,
@@ -89,7 +89,7 @@ def parse_python_file(file_path):
 
 if __name__ == "__main__":
     project_folder = "C:\\Users\\Abhinand\\OneDrive\\VS Code\\Data-Engineer-Agent-\\agents"
-
+    parsed_data = []
     for file in os.listdir(project_folder):
         if file.endswith(".py"):
             file_path = os.path.join(project_folder, file)
@@ -98,5 +98,13 @@ if __name__ == "__main__":
             ast_tree = parse_python_file(file_path)
 
             print(f"Nodes in {file}:\n{ast_tree}\n")
+            parsed_data.append({file: ast_tree})
+
+    with open("parsed_python_files.jsonl", "w", encoding="utf-8") as json_file:
+        for item in parsed_data:
+            json_file.write(json.dumps(item, indent=4) + "\n")
+
+
+    
 
 
