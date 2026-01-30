@@ -2,10 +2,13 @@ import chromadb
 from chromadb.utils import embedding_functions
 import os
 import json
-
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+
+model = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 embedding = embedding_functions.OpenAIEmbeddingFunction(model_name="text-embedding-3-small")
 
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
@@ -66,9 +69,9 @@ def create_collection_from_json(json_path):
         "line_no": node["line_no"],
         "end_line_no": node["end_line_no"],
         "imports": ",".join(node["imports"]),
-        "args": ",".join(node.get("args", []))
+        "args": ",".join(node.get("args", [])),
+        "source_code": node["source_code"][:1000]  # Truncate source code for metadata
     })
-
 
 
 
@@ -79,11 +82,23 @@ def create_collection_from_json(json_path):
 
     query = "Where can I find function to upload to GCS?"
 
-    results = collection.query(query_texts=[query], n_results=3)
+    results = collection.query(query_texts=[query], n_results=2)
 
     print("Query Results:")
-    print(results["documents"][0][0])
+    for i, metadata in enumerate(results["metadatas"][0]):
+        print(f"\n--- Result {i+1} ---")
+        print(metadata)
 
+    response = model.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a helpful programming assistant."},
+            {"role": "user", "content": f"{query}:\n\n{results['documents'][0][0]}\n\n{results['documents'][0][1]}\n\nProvide the function name and its file location."}
+        ],
+        max_tokens=300,
+    )
+    print("\nModel Response:")
+    print(response.choices[0].message.content)
 if __name__ == "__main__":
     create_collection_from_json("parsed_python_files.jsonl")
 
