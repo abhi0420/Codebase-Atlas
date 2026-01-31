@@ -4,6 +4,9 @@ import os
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
+from rank_bm25 import BM25Okapi
+import re
+
 
 load_dotenv()
 
@@ -31,16 +34,11 @@ def build_embedding_text(node):
 
 
 
-
-
-
-def create_collection_from_json(json_path):
-    documents = []
-    metadata = []
+def read_jsonl_file(jsonl_path):   
     data = []
     
     # Read JSONL format (multi-line pretty-printed JSON objects)
-    with open(json_path, "r", encoding="utf-8") as f:
+    with open(jsonl_path, "r", encoding="utf-8") as f:
         content = f.read()
         # Split by closing brace followed by newline and opening brace
         json_objects = content.strip().split('\n}\n{')
@@ -57,8 +55,51 @@ def create_collection_from_json(json_path):
                 file_data = json.loads(obj)
                 # Each object contains a dict with filename as key and list of nodes as value
                 for filename, nodes in file_data.items():
-                    data.extend(nodes)
+                    data.extend(nodes) 
+    return data
 
+def tokenize(text):
+     return re.findall(r"[A-Za-z_\.]+", text.lower())
+
+def build_bm25_text(node):
+    parts = [
+        node['name'],
+        node['node_type'],
+        node['id'].split('::')[0],
+        " ".join(node.get('imports', [])),
+        " ".join(node.get('args', [])),
+        ]
+
+    return " ".join(filter(None, parts))
+
+def create_bm25_store(data):
+    bm25_docs = []
+    bm25_ids = []
+    for node in data:
+        bm25_docs.append(tokenize(build_bm25_text(node)))
+        bm25_ids.append(node["id"])
+    
+    bm25 = BM25Okapi(bm25_docs)
+    print("BM25 store created.")
+    print("Sample BM25 document tokens:", bm25_docs[0][:20])  # Print first 20 tokens of the first document
+    return bm25, bm25_ids
+
+def bm25_search(bm25, bm25_ids, query, top_n=2):
+    query_tokens = tokenize(query)
+    scores = bm25.get_scores(query_tokens)
+
+    print("BM25 Scores:", scores)  # Debug: Print all scores
+
+    top_n_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_n]
+
+    results = [(bm25_ids[i], scores[i]) for i in top_n_indices if scores[i] > 0]
+
+    return results  
+
+def create_collection_from_data(data):
+    documents = []
+    metadata = []
+    
     for node in data:
         text = build_embedding_text(node)
         documents.append(text)
@@ -99,7 +140,17 @@ def create_collection_from_json(json_path):
     )
     print("\nModel Response:")
     print(response.choices[0].message.content)
+
+
 if __name__ == "__main__":
-    create_collection_from_json("parsed_python_files.jsonl")
+    data = read_jsonl_file("parsed_python_files.jsonl")
+    create_collection_from_data(data)
+    bm25, bm25_ids = create_bm25_store(data)
+    # Example BM25 query
+    query = "bigquery_assistant.py"
+    # results = bm25_search(bm25, bm25_ids, query, top_n=2)
+    # print(f"\nBM25 Search Results for '{query}':")
+    # for node_id, score in results:
+    #     print(f"ID: {node_id}, Score: {score}")
 
-
+    
