@@ -101,6 +101,9 @@ def build_bm25_text(node):
     return " ".join(filter(None, parts))
 
 def create_bm25_store(data):
+    """
+    Creates a BM25 index from parsed code nodes.
+    """
     try:
         if not data:
             raise ValueError("Cannot create BM25 store: data is empty")
@@ -127,6 +130,18 @@ def create_bm25_store(data):
         raise
 
 def bm25_search(bm25, bm25_ids, query, top_n=2):
+    """
+    Performs a BM25 search.
+    Args:
+        bm25 (BM25Okapi): The BM25 index.
+        bm25_ids (list): List of document IDs corresponding to the BM25 index.
+        query (str): The search query.
+        top_n (int): Number of top results to return.
+
+    Returns:
+        dict: Mapping of IDs to BM25 scores.
+
+    """
     try:
         if not query or not query.strip():
             raise ValueError("Query cannot be empty")
@@ -153,6 +168,14 @@ def bm25_search(bm25, bm25_ids, query, top_n=2):
         return {}  
 
 def create_collection_from_data(data):
+    """
+    Creates a ChromaDB collection from parsed code nodes.
+    Args:
+        data (list): List of parsed code nodes.
+    Returns:
+        chroma.Collection: The created ChromaDB collection.
+    """
+
     try:
         if not data:
             raise ValueError("Cannot create collection: data is empty")
@@ -209,6 +232,16 @@ def create_collection_from_data(data):
         raise
 
 def vector_search(collection, query, top_n=2):
+    """
+    Performs a vector search on the ChromaDB collection.
+    Args:
+        collection (chroma.Collection): The ChromaDB collection to search.
+        query (str): The search query.
+        top_n (int): Number of top results to return.
+    Returns:
+        dict: Mapping of IDs to similarity scores.
+    """
+
     try:
         if not query or not query.strip():
             raise ValueError("Query cannot be empty")
@@ -232,6 +265,14 @@ def vector_search(collection, query, top_n=2):
         return {}
 
 def normalise_scores(scores):
+    """Normalises scores to [0, 1] range using min-max scaling.
+    Args: 
+        scores (dict): Mapping of IDs to scores.
+
+    Returns:    
+        dict: Mapping of IDs to normalised scores.
+
+    """
     if not scores:
         return {}
     
@@ -250,6 +291,18 @@ def normalise_scores(scores):
 
 
 def hybrid_search(collection, bm25, bm25_ids, query, top_n=2, alpha=0.7, beta=0.3):
+    """
+    Performs a hybrid search combining vector search and BM25.
+    Args:
+        collection (chroma.Collection): The ChromaDB collection for vector search.
+        bm25 (BM25Okapi): The BM25 index.
+        bm25_ids (list): List of document IDs corresponding to the BM25 index.
+        query (str): The search query.
+        top_n (int): Number of top results to return.
+        alpha (float): Weight for vector search scores.
+        beta (float): Weight for BM25 scores.
+    """
+
     try:
         if abs(alpha + beta - 1.0) > 0.01:
             print(f"Warning: alpha + beta = {alpha + beta}, should equal 1.0")
@@ -290,7 +343,59 @@ def hybrid_search(collection, bm25, bm25_ids, query, top_n=2, alpha=0.7, beta=0.
         print(f"ERROR in hybrid search: {e}")
         return []
 
+def call_model(query, search_results, data):
+    """
+    Calls the language model with the query and search results.
+    Args:
+        query (str): The user query.
+        search_results (list): List of tuples (node_id, score).
+        data (list): Full list of parsed code nodes.
+    Returns:
+        str: The model's response.
+    """
+    try:
+        if not search_results:
+            return "No relevant code nodes found."
 
+        # Build rich context from top results
+        context_parts = []
+        for i, (node_id, score) in enumerate(search_results, 1):
+            node = next((n for n in data if n["id"] == node_id), None)
+            if node:
+                context_parts.append(f"""
+[Result {i}] {node['name']} (Relevance Score: {score:.4f})
+File: {node['id'].split('::')[0]}
+Lines: {node['line_no']}-{node['end_line_no']}
+Type: {node['node_type']}
+Arguments: {', '.join(node.get('args', []))}
+Docstring: {node.get('node_docstring', 'No documentation')}
+
+Source Code:
+{node['source_code']}
+""")
+        
+        context = "\n" + "="*80 + "\n".join(context_parts)
+
+        prompt = f"""
+You are a helpful code assistant. Analyze the following code snippets from a codebase and answer the user's query.
+
+CODE CONTEXT:
+{context}
+
+USER QUERY: {query}
+
+Provide a clear, concise answer based on the code above. Include function names, file locations, and line numbers when relevant."""
+        
+        response = model.chat.completions.create(
+            model="gpt-4o", 
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.2
+        )
+        return response.choices[0].message.content 
+    except Exception as e:
+        print(f"ERROR calling model: {e}")
+        return "Error generating response from model."
 
 
 if __name__ == "__main__":
@@ -310,8 +415,8 @@ if __name__ == "__main__":
         bm25, bm25_ids = create_bm25_store(data)
         
         # Example query
-        query = "execute query"
-        search_results = hybrid_search(collection, bm25, bm25_ids, query, top_n=5, alpha=0.6, beta=0.4)
+        query = "Is there any funtion related to creation of stored procedures?"
+        search_results = hybrid_search(collection, bm25, bm25_ids, query, top_n=2, alpha=0.6, beta=0.4)
 
         if not search_results:
             print("No search results found")
@@ -327,12 +432,20 @@ if __name__ == "__main__":
                     print(f"    Type: {node['node_type']}")
                     if node.get('node_docstring'):
                         print(f"    Doc: {node['node_docstring'][:100]}...")
+
+                    print(f"    Source Code:\n{node['source_code'][:300]}...\n")
+                    print("Line nos:", node['line_no'], "-", node['end_line_no'])
                 else:
                     print(f"\n[{i}] {node_id} (Score: {score:.4f}) - Node not found in data")
         
         print("\n" + "="*80)
         print("✓ Search complete")
         print("="*80 + "\n")
+
+        query_response = call_model(query, search_results, data)
+        print("MODEL RESPONSE:")
+        print("-" * 40)
+        print(query_response)
         
     except KeyboardInterrupt:
         print("\n\nInterrupted by user")
