@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codebase Atlas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-purple: #a371f7;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --gradient-start: #58a6ff;
+            --gradient-end: #a371f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: var(--accent-red);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Layout */
+        .main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Search Section */
+        .search-section {
+            margin-bottom: 2rem;
+        }
+
+        .search-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .search-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            border-color: transparent;
+            color: white;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            padding-right: 120px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 0.625rem 1.25rem;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        .search-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-50%) scale(1.02);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Options */
+        .search-options {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .option-group label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .option-group input[type="number"],
+        .option-group input[type="range"] {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.375rem 0.5rem;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            width: 60px;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            border: none;
+            padding: 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            min-width: 30px;
+        }
+
+        /* Results Section */
+        .results-section {
+            margin-top: 2rem;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .results-title {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .results-count {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* AI Answer Box */
+        .ai-answer {
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent-purple);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .ai-answer-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .ai-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .ai-answer-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-purple);
+        }
+
+        .ai-answer-content {
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        .ai-answer-content p {
+            margin-bottom: 1rem;
+        }
+
+        .ai-answer-content code {
+            background: var(--bg-tertiary);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875em;
+            color: var(--accent-blue);
+        }
+
+        /* Result Card */
+        .result-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .result-card:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .result-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+
+        .result-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .result-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .result-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .result-score {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .score-bar {
+            width: 60px;
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .score-value {
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-green);
+        }
+
+        .result-type {
+            padding: 0.25rem 0.625rem;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-type.function {
+            color: var(--accent-blue);
+        }
+
+        .result-type.class {
+            color: var(--accent-purple);
+        }
+
+        .result-body {
+            padding: 1.25rem;
+        }
+
+        .result-docstring {
+            margin-bottom: 1rem;
+            padding: 0.875rem 1rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-orange);
+        }
+
+        .result-docstring p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-style: italic;
+        }
+
+        .result-args {
+            margin-bottom: 1rem;
+        }
+
+        .result-args-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .args-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .arg-tag {
+            padding: 0.25rem 0.625rem;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            font-size: 0.8125rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-orange);
+        }
+
+        .code-block {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.625rem 1rem;
+            background: #1a1f26;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .code-filename {
+            font-size: 0.8125rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+        }
+
+        .copy-btn {
+            padding: 0.375rem 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .code-block pre {
+            margin: 0;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.8125rem;
+            line-height: 1.6;
+        }
+
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--bg-tertiary);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.125rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .empty-state p {
+            font-size: 0.875rem;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .search-options {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .result-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        /* Repository Selector */
+        .repo-dropdown {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-family: inherit;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .repo-dropdown:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .add-repo-btn {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .add-repo-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 560px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h2 {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-info {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .repo-path-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .repo-path-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+        }
+
+        .modal-options {
+            margin-top: 1rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-blue);
+        }
+
+        .index-status {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            display: none;
+        }
+
+        .index-status.loading {
+            display: block;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .index-status.success {
+            display: block;
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .index-status.error {
+            display: block;
+            background: rgba(248, 81, 73, 0.15);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+        }
+
+        .btn-primary {
+            padding: 0.625rem 1.25rem;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            padding: 0.625rem 1.25rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        /* Repo info badge */
+        .repo-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            color: var(--accent-purple);
+        }
+
+        /* Folder Upload */
+        .upload-section {
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .folder-upload-wrapper {
+            position: relative;
+        }
+
+        .folder-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .folder-upload-box {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg-primary);
+        }
+
+        .folder-upload-box:hover,
+        .folder-upload-box.dragover {
+            border-color: var(--accent-blue);
+            background: rgba(88, 166, 255, 0.05);
+        }
+
+        .folder-upload-box.has-files {
+            border-color: var(--accent-green);
+            border-style: solid;
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-text {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .upload-hint {
+            color: var(--text-muted);
+            font-size: 0.8125rem;
+        }
+
+        .file-count {
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            color: var(--accent-green);
+        }
+
+        .file-count.empty {
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <h1>Codebase Atlas</h1>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="repo-selector" id="repoSelector" style="display: none;">
+                    <select id="repoDropdown" class="repo-dropdown" onchange="switchRepo(this.value)">
+                    </select>
+                </div>
+                <button class="add-repo-btn" id="addRepoBtn" onclick="showRepoModal()">
+                    📤 Upload Repo
+                </button>
+                <div class="status-badge">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Connecting...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Repository Modal -->
+    <div class="modal-overlay" id="repoModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Upload Repository</h2>
+                <button class="modal-close" onclick="hideRepoModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-section">
+                    <label class="upload-label" for="repoName">Repository Name:</label>
+                    <input type="text" id="repoName" class="repo-path-input" 
+                        placeholder="my-python-project">
+                </div>
+                
+                <div class="upload-section" style="margin-top: 1rem;">
+                    <label class="upload-label">Select Folder:</label>
+                    <div class="folder-upload-wrapper">
+                        <input type="file" id="folderInput" webkitdirectory directory multiple 
+                            class="folder-input" onchange="handleFolderSelect(this)">
+                        <div class="folder-upload-box" id="folderUploadBox" onclick="document.getElementById('folderInput').click()">
+                            <div class="upload-icon">📁</div>
+                            <div class="upload-text">Click to select folder</div>
+                            <div class="upload-hint">or drag and drop</div>
+                        </div>
+                    </div>
+                    <div id="fileCount" class="file-count"></div>
+                </div>
+                
+                <div class="modal-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="forceReindex">
+                        Force re-index (replace if exists)
+                    </label>
+                </div>
+                <div id="indexStatus" class="index-status"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="hideRepoModal()">Cancel</button>
+                <button class="btn-primary" onclick="uploadRepo()" id="indexBtn" disabled>Upload & Index</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="main">
+        <section class="search-section">
+            <div class="search-container">
+                <div class="search-tabs">
+                    <button class="tab-btn active" data-tab="search" onclick="switchTab('search')">
+                        🔎 Search Code
+                    </button>
+                    <button class="tab-btn" data-tab="ask" onclick="switchTab('ask')">
+                        🤖 Ask AI
+                    </button>
+                </div>
+
+                <div class="search-input-wrapper">
+                    <input 
+                        type="text" 
+                        class="search-input" 
+                        id="searchInput" 
+                        placeholder="Search for functions, classes, or ask a question..."
+                        onkeypress="handleKeyPress(event)"
+                    >
+                    <button class="search-btn" id="searchBtn" onclick="performSearch()">
+                        Search
+                    </button>
+                </div>
+
+                <div class="search-options">
+                    <div class="option-group">
+                        <label for="topN">Results:</label>
+                        <input type="number" id="topN" value="5" min="1" max="20">
+                    </div>
+                    <div class="option-group">
+                        <label>Vector Weight:</label>
+                        <div class="slider-wrapper">
+                            <input type="range" id="alphaSlider" min="0" max="100" value="60" oninput="updateSlider()">
+                            <span class="slider-value" id="alphaValue">0.6</span>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label>BM25 Weight:</label>
+                        <div class="slider-wrapper">
+                            <span class="slider-value" id="betaValue">0.4</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-header">
+                <h2 class="results-title" id="resultsTitle">Search Results</h2>
+                <span class="results-count" id="resultsCount"></span>
+            </div>
+            <div id="aiAnswer"></div>
+            <div id="resultsContainer"></div>
+        </section>
+
+        <div class="loading" id="loadingState" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+            <div class="empty-state-icon">🗺️</div>
+            <h3>Explore Your Codebase</h3>
+            <p>Upload a Python repository to get started</p>
+            <button class="add-repo-btn" style="margin-top: 1rem;" onclick="showRepoModal()">
+                📤 Upload Repository
+            </button>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Codebase Atlas • Hybrid Search powered by Vector Embeddings + BM25</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentTab = 'search';
+        let repos = [];
+        let activeRepoId = null;
+
+        // Check API health and load repos
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                const statusDot = document.getElementById('statusDot');
+                const statusText = document.getElementById('statusText');
+                
+                if (data.total_nodes > 0) {
+                    statusDot.classList.remove('offline');
+                    statusText.textContent = `${data.total_nodes} nodes • ${data.active_repo || 'No repo'}`;
+                } else if (data.status === 'no_repos') {
+                    statusDot.classList.add('offline');
+                    statusText.textContent = 'No repos indexed';
+                } else {
+                    statusDot.classList.remove('offline');
+                    statusText.textContent = 'Ready';
+                }
+                
+                // Load repos
+                await loadRepos();
+            } catch (error) {
+                document.getElementById('statusDot').classList.add('offline');
+                document.getElementById('statusText').textContent = 'API Offline';
+            }
+        }
+
+        async function loadRepos() {
+            try {
+                const response = await fetch(`${API_BASE}/repos`);
+                const data = await response.json();
+                repos = data.repos || [];
+                activeRepoId = data.active_repo_id;
+                
+                const dropdown = document.getElementById('repoDropdown');
+                const selector = document.getElementById('repoSelector');
+                
+                if (repos.length > 0) {
+                    selector.style.display = 'block';
+                    dropdown.innerHTML = repos.map(r => 
+                        `<option value="${r.repo_id}" ${r.repo_id === activeRepoId ? 'selected' : ''}>
+                            📁 ${r.repo_name} (${r.node_count} nodes)
+                        </option>`
+                    ).join('');
+                } else {
+                    selector.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to load repos:', error);
+            }
+        }
+
+        async function switchRepo(repoId) {
+            try {
+                await fetch(`${API_BASE}/repos/${repoId}/activate`, { method: 'POST' });
+                activeRepoId = repoId;
+                await checkHealth();
+            } catch (error) {
+                console.error('Failed to switch repo:', error);
+            }
+        }
+
+        let selectedFiles = [];
+
+        function showRepoModal() {
+            document.getElementById('repoModal').style.display = 'flex';
+            document.getElementById('repoName').focus();
+            document.getElementById('indexStatus').style.display = 'none';
+            document.getElementById('fileCount').textContent = '';
+            document.getElementById('folderUploadBox').classList.remove('has-files');
+            document.getElementById('indexBtn').disabled = true;
+            selectedFiles = [];
+        }
+
+        function hideRepoModal() {
+            document.getElementById('repoModal').style.display = 'none';
+            document.getElementById('repoName').value = '';
+            document.getElementById('folderInput').value = '';
+            document.getElementById('forceReindex').checked = false;
+            selectedFiles = [];
+        }
+
+        function handleFolderSelect(input) {
+            const files = Array.from(input.files);
+            selectedFiles = files.filter(f => f.name.endsWith('.py'));
+            
+            const box = document.getElementById('folderUploadBox');
+            const countEl = document.getElementById('fileCount');
+            const btn = document.getElementById('indexBtn');
+            const nameInput = document.getElementById('repoName');
+            
+            if (selectedFiles.length > 0) {
+                box.classList.add('has-files');
+                countEl.textContent = `✓ ${selectedFiles.length} Python file(s) selected`;
+                countEl.classList.remove('empty');
+                btn.disabled = false;
+                
+                // Auto-fill repo name from folder path if empty
+                if (!nameInput.value && files.length > 0) {
+                    const path = files[0].webkitRelativePath || files[0].name;
+                    const folderName = path.split('/')[0];
+                    if (folderName) {
+                        nameInput.value = folderName;
+                    }
+                }
+            } else {
+                box.classList.remove('has-files');
+                countEl.textContent = 'No Python files found in selected folder';
+                countEl.classList.add('empty');
+                btn.disabled = true;
+            }
+        }
+
+        async function uploadRepo() {
+            const repoName = document.getElementById('repoName').value.trim();
+            if (!repoName) {
+                alert('Please enter a repository name');
+                return;
+            }
+            
+            if (selectedFiles.length === 0) {
+                alert('Please select a folder with Python files');
+                return;
+            }
+            
+            const forceReindex = document.getElementById('forceReindex').checked;
+            const statusEl = document.getElementById('indexStatus');
+            const indexBtn = document.getElementById('indexBtn');
+            
+            // Show loading
+            statusEl.className = 'index-status loading';
+            statusEl.textContent = `⏳ Uploading ${selectedFiles.length} files and indexing...`;
+            statusEl.style.display = 'block';
+            indexBtn.disabled = true;
+            indexBtn.textContent = 'Uploading...';
+            
+            // Build FormData
+            const formData = new FormData();
+            formData.append('repo_name', repoName);
+            formData.append('force_reindex', forceReindex);
+            
+            // Add all Python files
+            for (const file of selectedFiles) {
+                formData.append('files', file, file.webkitRelativePath || file.name);
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/repos/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Upload failed');
+                }
+                
+                // Success
+                statusEl.className = 'index-status success';
+                if (data.status === 'already_indexed') {
+                    statusEl.textContent = `✓ ${data.repo_name} already indexed (${data.node_count} nodes)`;
+                } else {
+                    statusEl.textContent = `✓ Indexed ${data.repo_name}: ${data.node_count} nodes from ${data.file_count} files`;
+                }
+                
+                // Reload and close
+                await loadRepos();
+                await checkHealth();
+                setTimeout(hideRepoModal, 2000);
+                
+            } catch (error) {
+                statusEl.className = 'index-status error';
+                statusEl.textContent = `✗ ${error.message}`;
+            } finally {
+                indexBtn.disabled = false;
+                indexBtn.textContent = 'Upload & Index';
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            
+            const input = document.getElementById('searchInput');
+            const btn = document.getElementById('searchBtn');
+            
+            if (tab === 'ask') {
+                input.placeholder = 'Ask a question about your codebase...';
+                btn.textContent = 'Ask AI';
+            } else {
+                input.placeholder = 'Search for functions, classes, or patterns...';
+                btn.textContent = 'Search';
+            }
+        }
+
+        function updateSlider() {
+            const alpha = document.getElementById('alphaSlider').value / 100;
+            const beta = 1 - alpha;
+            document.getElementById('alphaValue').textContent = alpha.toFixed(1);
+            document.getElementById('betaValue').textContent = beta.toFixed(1);
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            const topN = parseInt(document.getElementById('topN').value) || 5;
+            const alpha = document.getElementById('alphaSlider').value / 100;
+            const beta = 1 - alpha;
+
+            // Show loading
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'none';
+
+            try {
+                const endpoint = currentTab === 'ask' ? '/ask' : '/search';
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, top_n: topN, alpha, beta })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Search failed');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <h3>Search Failed</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                document.getElementById('aiAnswer').innerHTML = '';
+                document.getElementById('resultsSection').style.display = 'block';
+            } finally {
+                document.getElementById('loadingState').style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const aiAnswerContainer = document.getElementById('aiAnswer');
+            const resultsTitle = document.getElementById('resultsTitle');
+            const resultsCount = document.getElementById('resultsCount');
+
+            resultsSection.style.display = 'block';
+            
+            // Show which repo results are from
+            const repoName = data.repo_name || 'Unknown';
+
+            // Handle AI answer
+            if (data.answer) {
+                resultsTitle.textContent = 'AI Response';
+                aiAnswerContainer.innerHTML = `
+                    <div class="ai-answer">
+                        <div class="ai-answer-header">
+                            <div class="ai-icon">🤖</div>
+                            <h3>AI Assistant</h3>
+                            <span class="repo-info">📁 ${escapeHtml(repoName)}</span>
+                        </div>
+                        <div class="ai-answer-content">
+                            ${formatAIResponse(data.answer)}
+                        </div>
+                    </div>
+                `;
+                resultsCount.textContent = `${data.sources?.length || 0} sources from ${repoName}`;
+            } else {
+                resultsTitle.textContent = 'Search Results';
+                aiAnswerContainer.innerHTML = '';
+                resultsCount.textContent = `${data.total_results} results from ${repoName}`;
+            }
+
+            // Display results
+            const results = data.results || data.sources || [];
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3>No Results Found</h3>
+                        <p>Try a different search query</p>
+                    </div>
+                `;
+                return;
+            }
+
+            resultsContainer.innerHTML = results.map((result, index) => `
+                <div class="result-card">
+                    <div class="result-header">
+                        <div class="result-info">
+                            <span class="result-name">${escapeHtml(result.name)}</span>
+                            <div class="result-meta">
+                                <span>📁 ${escapeHtml(result.file)}</span>
+                                <span>📍 Lines ${result.line_no}-${result.end_line_no}</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div class="result-score">
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: ${result.score * 100}%"></div>
+                                </div>
+                                <span class="score-value">${(result.score * 100).toFixed(1)}%</span>
+                            </div>
+                            <span class="result-type ${result.node_type}">${result.node_type}</span>
+                        </div>
+                    </div>
+                    <div class="result-body">
+                        ${result.docstring ? `
+                            <div class="result-docstring">
+                                <p>${escapeHtml(result.docstring)}</p>
+                            </div>
+                        ` : ''}
+                        ${result.args && result.args.length > 0 ? `
+                            <div class="result-args">
+                                <div class="result-args-label">Arguments</div>
+                                <div class="args-list">
+                                    ${result.args.map(arg => `<span class="arg-tag">${escapeHtml(arg)}</span>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${result.source_code ? `
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-filename">${escapeHtml(result.file)}:${result.line_no}</span>
+                                    <button class="copy-btn" onclick="copyCode(this, ${index})">Copy</button>
+                                </div>
+                                <pre><code class="language-python" id="code-${index}">${escapeHtml(result.source_code)}</code></pre>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // Highlight code blocks
+            document.querySelectorAll('pre code').forEach(block => {
+                hljs.highlightElement(block);
+            });
+        }
+
+        function formatAIResponse(text) {
+            // Convert markdown-like formatting to HTML
+            return text
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/^/, '<p>')
+                .replace(/$/, '</p>');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyCode(btn, index) {
+            const code = document.getElementById(`code-${index}`).textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+            });
+        }
+
+        // Initialize
+        checkHealth();
+        setInterval(checkHealth, 30000);
+    </script>
+</body>
+</html>

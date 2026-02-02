@@ -167,11 +167,12 @@ def bm25_search(bm25, bm25_ids, query, top_n=2):
         print(f"ERROR in BM25 search: {e}")
         return {}  
 
-def create_collection_from_data(data):
+def create_collection_from_data(data, collection_name: str = "code_atlas"):
     """
     Creates a ChromaDB collection from parsed code nodes.
     Args:
         data (list): List of parsed code nodes.
+        collection_name (str): Name for the collection (default: "code_atlas")
     Returns:
         chroma.Collection: The created ChromaDB collection.
     """
@@ -215,7 +216,7 @@ def create_collection_from_data(data):
             raise ValueError("No valid documents to add to collection")
 
         print(f"Prepared {len(documents)} documents for indexing")
-        collection = chroma_client.get_or_create_collection(name="code_atlas", embedding_function=embedding)
+        collection = chroma_client.get_or_create_collection(name=collection_name, embedding_function=embedding)
         
         # Check existing count
         existing_count = collection.count()
