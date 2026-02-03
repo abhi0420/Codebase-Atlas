@@ -780,6 +780,58 @@
             border: 1px solid var(--accent-red);
         }
 
+        /* Source tabs for modal */
+        .source-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .source-tab {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .source-tab:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .source-tab.active {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            border-color: transparent;
+            color: white;
+        }
+
+        .source-section {
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
         .modal-footer {
             display: flex;
             justify-content: flex-end;
@@ -937,28 +989,52 @@
     <div class="modal-overlay" id="repoModal" style="display: none;">
         <div class="modal">
             <div class="modal-header">
-                <h2>Upload Repository</h2>
+                <h2>Add Repository</h2>
                 <button class="modal-close" onclick="hideRepoModal()">×</button>
             </div>
             <div class="modal-body">
-                <div class="upload-section">
-                    <label class="upload-label" for="repoName">Repository Name:</label>
-                    <input type="text" id="repoName" class="repo-path-input" 
-                        placeholder="my-python-project">
+                <!-- Source Type Tabs -->
+                <div class="source-tabs">
+                    <button class="source-tab active" data-source="github" onclick="switchSourceTab('github')">
+                        🔗 GitHub URL
+                    </button>
+                    <button class="source-tab" data-source="folder" onclick="switchSourceTab('folder')">
+                        📁 Local Folder
+                    </button>
                 </div>
-                
-                <div class="upload-section" style="margin-top: 1rem;">
-                    <label class="upload-label">Select Folder:</label>
-                    <div class="folder-upload-wrapper">
-                        <input type="file" id="folderInput" webkitdirectory directory multiple 
-                            class="folder-input" onchange="handleFolderSelect(this)">
-                        <div class="folder-upload-box" id="folderUploadBox" onclick="document.getElementById('folderInput').click()">
-                            <div class="upload-icon">📁</div>
-                            <div class="upload-text">Click to select folder</div>
-                            <div class="upload-hint">or drag and drop</div>
-                        </div>
+
+                <!-- GitHub URL Section -->
+                <div id="githubSection" class="source-section">
+                    <div class="upload-section">
+                        <label class="upload-label" for="githubUrl">GitHub Repository URL:</label>
+                        <input type="text" id="githubUrl" class="repo-path-input" 
+                            placeholder="https://github.com/owner/repository"
+                            oninput="validateGithubUrl()">
+                        <div class="input-hint">Enter a public GitHub repository URL</div>
                     </div>
-                    <div id="fileCount" class="file-count"></div>
+                </div>
+
+                <!-- Folder Upload Section -->
+                <div id="folderSection" class="source-section" style="display: none;">
+                    <div class="upload-section">
+                        <label class="upload-label" for="repoName">Repository Name:</label>
+                        <input type="text" id="repoName" class="repo-path-input" 
+                            placeholder="my-python-project">
+                    </div>
+                    
+                    <div class="upload-section" style="margin-top: 1rem;">
+                        <label class="upload-label">Select Folder:</label>
+                        <div class="folder-upload-wrapper">
+                            <input type="file" id="folderInput" webkitdirectory directory multiple 
+                                class="folder-input" onchange="handleFolderSelect(this)">
+                            <div class="folder-upload-box" id="folderUploadBox" onclick="document.getElementById('folderInput').click()">
+                                <div class="upload-icon">📁</div>
+                                <div class="upload-text">Click to select folder</div>
+                                <div class="upload-hint">or drag and drop</div>
+                            </div>
+                        </div>
+                        <div id="fileCount" class="file-count"></div>
+                    </div>
                 </div>
                 
                 <div class="modal-options">
@@ -971,7 +1047,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="hideRepoModal()">Cancel</button>
-                <button class="btn-primary" onclick="uploadRepo()" id="indexBtn" disabled>Upload & Index</button>
+                <button class="btn-primary" onclick="submitRepo()" id="indexBtn" disabled>Index Repository</button>
             </div>
         </div>
     </div>
@@ -1122,23 +1198,56 @@
         }
 
         let selectedFiles = [];
+        let currentSourceTab = 'github';
 
         function showRepoModal() {
             document.getElementById('repoModal').style.display = 'flex';
-            document.getElementById('repoName').focus();
             document.getElementById('indexStatus').style.display = 'none';
             document.getElementById('fileCount').textContent = '';
             document.getElementById('folderUploadBox').classList.remove('has-files');
             document.getElementById('indexBtn').disabled = true;
+            document.getElementById('githubUrl').value = '';
+            document.getElementById('repoName').value = '';
             selectedFiles = [];
+            // Reset to GitHub tab
+            switchSourceTab('github');
+            document.getElementById('githubUrl').focus();
         }
 
         function hideRepoModal() {
             document.getElementById('repoModal').style.display = 'none';
             document.getElementById('repoName').value = '';
             document.getElementById('folderInput').value = '';
+            document.getElementById('githubUrl').value = '';
             document.getElementById('forceReindex').checked = false;
             selectedFiles = [];
+        }
+
+        function switchSourceTab(tab) {
+            currentSourceTab = tab;
+            document.querySelectorAll('.source-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.source === tab);
+            });
+            
+            document.getElementById('githubSection').style.display = tab === 'github' ? 'block' : 'none';
+            document.getElementById('folderSection').style.display = tab === 'folder' ? 'block' : 'none';
+            
+            // Update button text and state
+            const btn = document.getElementById('indexBtn');
+            if (tab === 'github') {
+                btn.textContent = 'Clone & Index';
+                validateGithubUrl();
+            } else {
+                btn.textContent = 'Upload & Index';
+                btn.disabled = selectedFiles.length === 0;
+            }
+        }
+
+        function validateGithubUrl() {
+            const url = document.getElementById('githubUrl').value.trim();
+            const btn = document.getElementById('indexBtn');
+            const githubPattern = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(\.git)?$/;
+            btn.disabled = !githubPattern.test(url);
         }
 
         function handleFolderSelect(input) {
@@ -1169,6 +1278,70 @@
                 countEl.textContent = 'No Python files found in selected folder';
                 countEl.classList.add('empty');
                 btn.disabled = true;
+            }
+        }
+
+        async function submitRepo() {
+            if (currentSourceTab === 'github') {
+                await cloneGithubRepo();
+            } else {
+                await uploadRepo();
+            }
+        }
+
+        async function cloneGithubRepo() {
+            const repoUrl = document.getElementById('githubUrl').value.trim();
+            if (!repoUrl) {
+                alert('Please enter a GitHub repository URL');
+                return;
+            }
+            
+            const forceReindex = document.getElementById('forceReindex').checked;
+            const statusEl = document.getElementById('indexStatus');
+            const indexBtn = document.getElementById('indexBtn');
+            
+            // Show loading
+            statusEl.className = 'index-status loading';
+            statusEl.textContent = '⏳ Cloning repository and indexing...';
+            statusEl.style.display = 'block';
+            indexBtn.disabled = true;
+            indexBtn.textContent = 'Cloning...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/repos/github`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        repo_url: repoUrl, 
+                        force_reindex: forceReindex 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Cloning failed');
+                }
+                
+                // Success
+                statusEl.className = 'index-status success';
+                if (data.status === 'already_indexed') {
+                    statusEl.textContent = `✓ ${data.repo_name} already indexed (${data.node_count} nodes)`;
+                } else {
+                    statusEl.textContent = `✓ Indexed ${data.repo_name}: ${data.node_count} nodes from ${data.file_count} files`;
+                }
+                
+                // Reload and close
+                await loadRepos();
+                await checkHealth();
+                setTimeout(hideRepoModal, 2000);
+                
+            } catch (error) {
+                statusEl.className = 'index-status error';
+                statusEl.textContent = `✗ ${error.message}`;
+            } finally {
+                indexBtn.disabled = false;
+                indexBtn.textContent = 'Clone & Index';
             }
         }
 

@@ -18,6 +18,15 @@ import json
 import os
 import shutil
 import tempfile
+import subprocess
+import re
+import stat
+
+
+def force_remove_readonly(func, path, excinfo):
+    """Error handler for shutil.rmtree to handle read-only files on Windows."""
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 from chroma_setup import (
     read_jsonl_file,
@@ -259,6 +268,59 @@ def restore_repo(repo_info: Dict) -> bool:
             print(f"  → Skipping (will reload from JSONL)")
             return False
         
+        # Check if it's a GitHub repo (URL stored as path)
+        is_github = repo_path.startswith("https://github.com/") or repo_path.startswith("git@github.com:")
+        
+        # For GitHub repos, we can't re-parse (files are deleted after indexing)
+        # We rely solely on the ChromaDB collection
+        if is_github:
+            collection_name = f"repo_{repo_id}"
+            try:
+                collection = chroma_client.get_collection(name=collection_name)
+                if collection.count() == 0:
+                    print(f"  ! Collection is empty: {collection_name}")
+                    return False
+            except Exception:
+                print(f"  ! Collection not found: {collection_name}")
+                return False
+            
+            # For GitHub repos, we need to get nodes from collection metadata
+            # Since we can't re-parse, create minimal state with collection data
+            all_data = collection.get(include=["metadatas", "documents"])
+            nodes = []
+            for i, meta in enumerate(all_data["metadatas"]):
+                # Get source from metadata first (truncated), then from documents if available
+                source_code = meta.get("source_code", "")
+                nodes.append({
+                    "id": all_data["ids"][i],
+                    "name": meta.get("name", ""),
+                    "node_type": meta.get("type", ""),  # stored as 'type' in metadata
+                    "line_no": meta.get("line_no", 0),
+                    "end_line_no": meta.get("end_line_no", 0),
+                    "node_docstring": "",
+                    "source_code": source_code,
+                    "args": meta.get("args", "").split(",") if meta.get("args") else []
+                })
+            
+            # Create BM25 from recovered nodes
+            bm25, bm25_ids = create_bm25_store(nodes)
+            
+            repo_state = RepoState(
+                repo_id=repo_id,
+                repo_name=repo_info["repo_name"],
+                repo_path=repo_path,
+                nodes=nodes,
+                content_hash=repo_info.get("content_hash", "")
+            )
+            repo_state.collection = collection
+            repo_state.bm25 = bm25
+            repo_state.bm25_ids = bm25_ids
+            repo_state.file_count = repo_info.get("file_count", 0)
+            repo_state.indexed_at = repo_info.get("indexed_at", "")
+            
+            state.repos[repo_id] = repo_state
+            return True
+        
         if not os.path.exists(repo_path):
             print(f"  ! Path no longer exists: {repo_path}")
             return False
@@ -440,6 +502,169 @@ async def api_index_repo(request: IndexRepoRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Indexing failed: {str(e)}")
+
+
+class GitHubRepoRequest(BaseModel):
+    repo_url: str = Field(..., description="GitHub repository URL (e.g., https://github.com/owner/repo)")
+    force_reindex: bool = Field(default=False, description="Force re-indexing even if already indexed")
+
+
+def clone_github_repo(repo_url: str, dest_path: str) -> bool:
+    """Clone a GitHub repository to the specified path."""
+    try:
+        subprocess.run(
+            ['git', 'clone', '--depth', '1', repo_url, dest_path],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Git clone failed: {e.stderr}")
+        return False
+
+
+def extract_repo_name_from_url(repo_url: str) -> str:
+    """Extract repository name from GitHub URL."""
+    # Handle various URL formats
+    # https://github.com/owner/repo.git
+    # https://github.com/owner/repo
+    # git@github.com:owner/repo.git
+    match = re.search(r'[/:]([^/]+)/([^/.]+?)(\.git)?$', repo_url)
+    if match:
+        return match.group(2)
+    return "github-repo"
+
+
+@app.post("/repos/github", tags=["Repositories"])
+async def index_github_repo(request: GitHubRepoRequest):
+    """
+    Clone and index a GitHub repository.
+    The repository is cloned temporarily, indexed, and then the clone is removed.
+    """
+    repo_url = request.repo_url.strip()
+    
+    # Validate URL format
+    if not re.match(r'^(https://github\.com/|git@github\.com:)[\w.-]+/[\w.-]+(\.git)?$', repo_url):
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid GitHub URL. Please use format: https://github.com/owner/repo"
+        )
+    
+    # Extract repo name and generate ID
+    repo_name = extract_repo_name_from_url(repo_url)
+    repo_id = hashlib.md5(repo_url.encode()).hexdigest()[:12]
+    
+    # Check if already indexed
+    if repo_id in state.repos and not request.force_reindex:
+        existing = state.repos[repo_id]
+        state.active_repo_id = repo_id
+        return {
+            "status": "already_indexed",
+            "repo_id": repo_id,
+            "repo_name": existing.repo_name,
+            "node_count": len(existing.nodes),
+            "message": f"Repository '{repo_name}' already indexed. Enable force re-index to update."
+        }
+    
+    # Create temp directory for cloning
+    clone_dir = UPLOAD_DIR / f"github_{repo_id}"
+    
+    # Clean up if exists
+    if clone_dir.exists():
+        shutil.rmtree(clone_dir, onerror=force_remove_readonly)
+    
+    print(f"\n{'='*60}")
+    print(f"Cloning GitHub Repository: {repo_name}")
+    print(f"URL: {repo_url}")
+    print(f"ID: {repo_id}")
+    print(f"{'='*60}\n")
+    
+    # Clone the repository
+    print(f"Cloning repository...")
+    if not clone_github_repo(repo_url, str(clone_dir)):
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to clone repository. Please check the URL and ensure the repository is public."
+        )
+    
+    print(f"✓ Repository cloned successfully")
+    
+    try:
+        # Index the cloned repository
+        result = index_github_repo_internal(str(clone_dir), repo_name, repo_id, repo_url)
+        return result
+    finally:
+        # Always clean up the cloned directory after indexing
+        print(f"Cleaning up cloned files...")
+        if clone_dir.exists():
+            shutil.rmtree(clone_dir, onerror=force_remove_readonly)
+        print(f"✓ Cleanup complete")
+
+
+def index_github_repo_internal(repo_path: str, repo_name: str, repo_id: str, repo_url: str) -> Dict[str, Any]:
+    """Index a cloned GitHub repository."""
+    from repo_parser import parse_repository
+    
+    print(f"Parsing repository files...")
+    parse_result = parse_repository(repo_path)
+    
+    if parse_result["total_nodes"] == 0:
+        raise ValueError("No Python code nodes found in repository")
+    
+    nodes = parse_result["nodes"]
+    print(f"✓ Found {len(nodes)} nodes in {parse_result['files_parsed']} files")
+    
+    # Create ChromaDB collection
+    collection_name = f"repo_{repo_id}"
+    print(f"Creating collection: {collection_name}")
+    
+    try:
+        chroma_client.delete_collection(collection_name)
+    except Exception:
+        pass
+    
+    collection = create_collection_from_data(nodes, collection_name=collection_name)
+    
+    # Create BM25 index
+    print(f"Creating BM25 index...")
+    bm25, bm25_ids = create_bm25_store(nodes)
+    
+    # Generate content hash
+    content_hash = hashlib.md5(
+        "|".join(n.get("source_code", "") for n in nodes).encode()
+    ).hexdigest()
+    
+    # Create repo state - store URL as path for reference
+    repo_state = RepoState(
+        repo_id=repo_id,
+        repo_name=repo_name,
+        repo_path=repo_url,  # Store GitHub URL as the path
+        nodes=nodes,
+        content_hash=content_hash
+    )
+    repo_state.collection = collection
+    repo_state.bm25 = bm25
+    repo_state.bm25_ids = bm25_ids
+    repo_state.file_count = parse_result["files_parsed"]
+    
+    # Store and activate
+    state.repos[repo_id] = repo_state
+    state.active_repo_id = repo_id
+    state.initialized = True
+    state.save_index()
+    
+    print(f"\n✓ Indexed successfully: {len(nodes)} nodes from {parse_result['files_parsed']} files\n")
+    
+    return {
+        "status": "indexed",
+        "repo_id": repo_id,
+        "repo_name": repo_name,
+        "repo_url": repo_url,
+        "node_count": len(nodes),
+        "file_count": parse_result["files_parsed"],
+        "message": "GitHub repository cloned and indexed successfully"
+    }
 
 
 @app.post("/repos/upload", tags=["Repositories"])

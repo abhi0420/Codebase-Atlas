@@ -1,5 +1,5 @@
 {
-  "active_repo_id": "10cd395cf71c",
+  "active_repo_id": "596bc2d8e91c",
   "repos": {
     "596bc2d8e91c": {
       "repo_id": "596bc2d8e91c",
@@ -18,6 +18,15 @@
       "file_count": 2,
       "content_hash": "5fbe1b2eb8acbe722a95015dccbfaedf",
       "indexed_at": "2026-02-01T00:30:25.923299"
+    },
+    "6075507517b0": {
+      "repo_id": "6075507517b0",
+      "repo_name": "quaizr",
+      "repo_path": "https://github.com/minimice/quaizr",
+      "node_count": 3,
+      "file_count": 1,
+      "content_hash": "fd44e0e1353c6168774f8c47a6eee12d",
+      "indexed_at": "2026-02-03T23:37:43.908943"
     }
   }
 }
