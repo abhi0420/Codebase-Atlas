@@ -954,6 +954,7 @@ async def ask(request: AskRequest):
                     end_line_no=node["end_line_no"],
                     score=round(score, 4),
                     docstring=node.get("node_docstring"),
+                    source_code=node.get("source_code"),
                     args=node.get("args", [])
                 ))
         

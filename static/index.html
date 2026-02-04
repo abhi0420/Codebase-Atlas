@@ -499,6 +499,8 @@
             position: relative;
             border-radius: 8px;
             overflow: hidden;
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
         }
 
         .code-header {
@@ -516,7 +518,12 @@
             color: var(--text-secondary);
         }
 
-        .copy-btn {
+        .code-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .copy-btn, .expand-btn {
             padding: 0.375rem 0.75rem;
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
@@ -527,21 +534,61 @@
             transition: all 0.2s;
         }
 
-        .copy-btn:hover {
+        .copy-btn:hover, .expand-btn:hover {
             background: var(--bg-secondary);
             color: var(--text-primary);
         }
 
         .code-block pre {
             margin: 0;
-            padding: 1rem;
+            padding: 0;
             overflow-x: auto;
             font-size: 0.8125rem;
             line-height: 1.6;
+            display: flex;
         }
 
         .code-block code {
             font-family: 'JetBrains Mono', monospace;
+            padding: 1rem;
+            flex: 1;
+        }
+
+        .line-numbers {
+            padding: 1rem 0.75rem;
+            background: #1a1f26;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.6;
+            text-align: right;
+            user-select: none;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .code-collapsed {
+            max-height: 200px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .code-collapsed::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(transparent, var(--bg-secondary));
+            pointer-events: none;
+        }
+
+        .code-expanded {
+            max-height: none;
+        }
+
+        .code-expanded::after {
+            display: none;
         }
 
         /* Loading State */
@@ -1470,6 +1517,7 @@
                 }
 
                 const data = await response.json();
+                console.log('Full API Response:', JSON.stringify(data, null, 2));
                 displayResults(data);
             } catch (error) {
                 console.error('Error:', error);
@@ -1535,7 +1583,18 @@
                 return;
             }
 
-            resultsContainer.innerHTML = results.map((result, index) => `
+            resultsContainer.innerHTML = results.map((result, index) => {
+                // Debug: log what we're receiving
+                console.log(`Result ${index}:`, result.name, 'source_code:', result.source_code ? result.source_code.substring(0, 50) + '...' : 'NONE');
+                
+                const hasCode = result.source_code && result.source_code.trim();
+                const codeLines = hasCode ? result.source_code.split('\n') : [];
+                const lineCount = codeLines.length;
+                const startLine = result.line_no || 1;
+                const lineNumbers = hasCode ? codeLines.map((_, i) => startLine + i).join('\n') : '';
+                const isLongCode = lineCount > 10;
+                
+                return `
                 <div class="result-card">
                     <div class="result-header">
                         <div class="result-info">
@@ -1569,18 +1628,32 @@
                                 </div>
                             </div>
                         ` : ''}
-                        ${result.source_code ? `
+                        ${hasCode ? `
                             <div class="code-block">
                                 <div class="code-header">
-                                    <span class="code-filename">${escapeHtml(result.file)}:${result.line_no}</span>
-                                    <button class="copy-btn" onclick="copyCode(this, ${index})">Copy</button>
+                                    <span class="code-filename">${escapeHtml(result.file)} : Lines ${result.line_no}-${result.end_line_no}</span>
+                                    <div class="code-actions">
+                                        ${isLongCode ? `<button class="expand-btn" onclick="toggleCode(${index})">Expand</button>` : ''}
+                                        <button class="copy-btn" onclick="copyCode(this, ${index})">Copy</button>
+                                    </div>
                                 </div>
-                                <pre><code class="language-python" id="code-${index}">${escapeHtml(result.source_code)}</code></pre>
+                                <div id="code-wrapper-${index}" class="${isLongCode ? 'code-collapsed' : ''}">
+                                    <pre><div class="line-numbers">${lineNumbers}</div><code class="language-python" id="code-${index}">${escapeHtml(result.source_code)}</code></pre>
+                                </div>
                             </div>
-                        ` : ''}
+                        ` : `
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-filename">${escapeHtml(result.file)}</span>
+                                </div>
+                                <div style="padding: 1rem; color: var(--text-muted); font-style: italic;">
+                                    Source code not available
+                                </div>
+                            </div>
+                        `}
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
 
             // Highlight code blocks
             document.querySelectorAll('pre code').forEach(block => {
@@ -1612,6 +1685,21 @@
                 btn.textContent = 'Copied!';
                 setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
             });
+        }
+
+        function toggleCode(index) {
+            const wrapper = document.getElementById(`code-wrapper-${index}`);
+            const btn = wrapper.parentElement.querySelector('.expand-btn');
+            
+            if (wrapper.classList.contains('code-collapsed')) {
+                wrapper.classList.remove('code-collapsed');
+                wrapper.classList.add('code-expanded');
+                btn.textContent = 'Collapse';
+            } else {
+                wrapper.classList.remove('code-expanded');
+                wrapper.classList.add('code-collapsed');
+                btn.textContent = 'Expand';
+            }
         }
 
         // Initialize
