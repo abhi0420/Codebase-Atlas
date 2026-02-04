@@ -851,18 +851,45 @@ async def delete_repo(repo_id: str):
     if repo_id not in state.repos:
         raise HTTPException(status_code=404, detail="Repository not found")
     
+    repo = state.repos[repo_id]
+    repo_name = repo.repo_name
+    
+    # Delete ChromaDB collection
     try:
         chroma_client.delete_collection(f"repo_{repo_id}")
-    except Exception:
-        pass
+        print(f"✓ Deleted ChromaDB collection: repo_{repo_id}")
+    except Exception as e:
+        print(f"Warning: Could not delete collection: {e}")
     
+    # Delete uploaded files if they exist (for folder uploads)
+    repo_path = repo.repo_path
+    if not repo_path.startswith("http") and "uploaded_repos" in repo_path:
+        upload_dir = Path(repo_path)
+        if upload_dir.exists():
+            try:
+                shutil.rmtree(upload_dir, onerror=force_remove_readonly)
+                print(f"✓ Deleted uploaded files: {upload_dir}")
+            except Exception as e:
+                print(f"Warning: Could not delete files: {e}")
+    
+    # Remove from state
     del state.repos[repo_id]
     
+    # Update active repo if needed
     if state.active_repo_id == repo_id:
         state.active_repo_id = next(iter(state.repos.keys()), None)
     
+    # Save updated index
     state.save_index()
-    return {"status": "deleted", "repo_id": repo_id}
+    
+    print(f"✓ Repository '{repo_name}' deleted successfully")
+    
+    return {
+        "status": "deleted", 
+        "repo_id": repo_id,
+        "repo_name": repo_name,
+        "message": f"Repository '{repo_name}' has been completely removed"
+    }
 
 # ============================================================================
 # Search Endpoints

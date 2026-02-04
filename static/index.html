@@ -665,6 +665,12 @@
         }
 
         /* Repository Selector */
+        .repo-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         .repo-dropdown {
             padding: 0.5rem 1rem;
             background: var(--bg-tertiary);
@@ -680,6 +686,106 @@
         .repo-dropdown:focus {
             outline: none;
             border-color: var(--accent-blue);
+        }
+
+        .manage-repos-btn {
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .manage-repos-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+        }
+
+        /* Repo List in Manage Modal */
+        .repo-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .repo-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+
+        .repo-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .repo-item:last-child {
+            border-bottom: none;
+        }
+
+        .repo-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .repo-item-name {
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .repo-item-name .active-badge {
+            font-size: 0.7rem;
+            padding: 0.125rem 0.5rem;
+            background: var(--accent-green);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .repo-item-meta {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .repo-item-source {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .delete-repo-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--accent-red);
+            border-radius: 6px;
+            color: var(--accent-red);
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .delete-repo-btn:hover {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .delete-repo-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .repo-list-empty {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
         }
 
         .add-repo-btn {
@@ -1020,9 +1126,10 @@
                 <div class="repo-selector" id="repoSelector" style="display: none;">
                     <select id="repoDropdown" class="repo-dropdown" onchange="switchRepo(this.value)">
                     </select>
+                    <button class="manage-repos-btn" onclick="showManageModal()" title="Manage repositories">⚙️</button>
                 </div>
                 <button class="add-repo-btn" id="addRepoBtn" onclick="showRepoModal()">
-                    📤 Upload Repo
+                    📤 Add Repo
                 </button>
                 <div class="status-badge">
                     <div class="status-dot" id="statusDot"></div>
@@ -1095,6 +1202,24 @@
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="hideRepoModal()">Cancel</button>
                 <button class="btn-primary" onclick="submitRepo()" id="indexBtn" disabled>Index Repository</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Repos Modal -->
+    <div class="modal-overlay" id="manageModal" style="display: none;">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Manage Repositories</h2>
+                <button class="modal-close" onclick="hideManageModal()">×</button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <div id="repoList" class="repo-list">
+                    <!-- Repos will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="hideManageModal()">Close</button>
             </div>
         </div>
     </div>
@@ -1241,6 +1366,88 @@
                 await checkHealth();
             } catch (error) {
                 console.error('Failed to switch repo:', error);
+            }
+        }
+
+        function showManageModal() {
+            document.getElementById('manageModal').style.display = 'flex';
+            renderRepoList();
+        }
+
+        function hideManageModal() {
+            document.getElementById('manageModal').style.display = 'none';
+        }
+
+        function renderRepoList() {
+            const listEl = document.getElementById('repoList');
+            
+            if (repos.length === 0) {
+                listEl.innerHTML = `
+                    <div class="repo-list-empty">
+                        <p>No repositories indexed yet.</p>
+                        <button class="btn-primary" onclick="hideManageModal(); showRepoModal();" style="margin-top: 1rem;">
+                            Add Repository
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            listEl.innerHTML = repos.map(r => {
+                const isActive = r.repo_id === activeRepoId;
+                const isGithub = r.repo_path && r.repo_path.startsWith('http');
+                const sourceLabel = isGithub ? '🔗 GitHub' : '📁 Local';
+                const sourcePath = isGithub ? r.repo_path : 'Uploaded folder';
+                
+                return `
+                <div class="repo-item">
+                    <div class="repo-item-info">
+                        <div class="repo-item-name">
+                            ${escapeHtml(r.repo_name)}
+                            ${isActive ? '<span class="active-badge">Active</span>' : ''}
+                        </div>
+                        <div class="repo-item-meta">
+                            ${r.node_count} nodes • ${r.file_count} files • ${sourceLabel}
+                        </div>
+                        <div class="repo-item-source">${escapeHtml(sourcePath)}</div>
+                    </div>
+                    <button class="delete-repo-btn" onclick="confirmDeleteRepo('${r.repo_id}', '${escapeHtml(r.repo_name)}')">
+                        🗑️ Delete
+                    </button>
+                </div>
+            `}).join('');
+        }
+
+        async function confirmDeleteRepo(repoId, repoName) {
+            if (!confirm(`Are you sure you want to delete "${repoName}"?\n\nThis will remove:\n• All indexed data from ChromaDB\n• Uploaded files (if any)\n• Saved metadata\n\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/repos/${repoId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Delete failed');
+                }
+                
+                const data = await response.json();
+                alert(`✓ ${data.message}`);
+                
+                // Refresh everything
+                await loadRepos();
+                await checkHealth();
+                renderRepoList();
+                
+                // Close modal if no repos left
+                if (repos.length === 0) {
+                    hideManageModal();
+                }
+                
+            } catch (error) {
+                alert(`Failed to delete: ${error.message}`);
             }
         }
 
