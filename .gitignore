@@ -1,4 +1,4 @@
 .env
+uploaded_repos/
 chroma_db/
 *.jsonl
-uploaded_repos/*
