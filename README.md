@@ -11,6 +11,30 @@ Codebase Atlas lets you search and ask questions about any Python codebase using
 
 ---
 
+## 📸 Screenshots
+
+### Search Code
+Find functions, classes, and methods with hybrid semantic + keyword search:
+
+![Search Results](images/search-results.png)
+
+### Ask AI
+Get AI-powered answers about your codebase:
+
+![Ask AI](images/ask-ai.png)
+
+### Add Repository
+Index repos from GitHub or upload local folders:
+
+![Add Repository](images/add-repo.png)
+
+### Manage Repositories
+View and delete indexed repositories:
+
+![Manage Repos](images/manage-repos.png)
+
+---
+
 ## ✨ Features
 
 - 🔗 **GitHub Integration** - Clone and index any public GitHub repository
